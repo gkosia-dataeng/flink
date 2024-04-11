@@ -1,0 +1,73 @@
+APIs: in SQL, Python, Java
+Streaming: unbounded stream of events
+
+
+State
+Time
+Snapshots
+
+
+Job graph (Topology):  
+    Running a flink application is called job
+    Events are passing throught a data processing pipeline called Job Graph (DAG)
+    Each processing step of the Graph called Node
+    Each Node of the Graph executed by an Operator
+    Operators transforme the events
+
+
+    A stream is partitioned to parallel substreams 
+    Each substream can independendly prosessed
+
+    An operator Forward the events to the substreams based on partition logic
+    Another operator can filter the events of the partiotn based on other logic
+
+    Events at some point might be shuffled or repartitioned to colocate the events in the same partition
+    On shuffle or repartition the events must be serialized, moved over the network and go to other Node
+
+    If we decide to change the partition logic then we have a Rebalance operation (works like shuffle)
+
+    We can also Broadcast a partition to distribute it to all the Nodes
+    We can Join streams to enrich the data
+
+
+FlinkSQL:
+
+    Can be used for both batch and streaming
+        
+    Flink abstraction table: 
+                    FlinkSQL (Higher lelvel of abstraction)     simple sql to process streams 
+                Table API(dynamic tables)                       declarative DSL (java or python code)
+            DataStream API(streams, windows)                    stream processing and analytics
+        Process functions (events, state, time)                 low level stateful stream processing
+
+
+    Table: describe data that exists somewhere else
+           Schema: column names and data types
+           Connection properties: connection, topic, value format, bootstrap server...
+          
+
+          Table durability: Append Only or Updating tables
+
+                Table event types:
+                    +I: insertion: default
+                    -U: Update before: retract an earlier event
+                    +U: Update after: update an earlier event
+                    -D: Delete: delete an earlier event
+
+                    Iinput stream (Append only)     Output stream (Updating table)
+                    New record came proA 50:        +I 50
+                    New record came proB 20:        +I 20
+                    New record came proA -15:       -U 50, +U 35 (remove the row that shows 50 and add new row with 35)
+    
+    Batch vs Stream:
+
+        Sorting:
+            Batch: sort by anything
+            Stream: can sort only by time asc
+        Joins:
+            Batch: INNER and Outer joins
+            Stream: special joins with Temporal table or external lookup table
+
+
+            https://developer.confluent.io/courses/apache-flink/stream-processing-exercise/
+            https://www.youtube.com/watch?v=FyTcSxuQ_2k

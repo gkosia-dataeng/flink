@@ -1,0 +1,1 @@
+Notes from https://developer.confluent.io/courses/apache-flink/stream-processing/
