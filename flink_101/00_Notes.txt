@@ -68,6 +68,60 @@ FlinkSQL:
             Batch: INNER and Outer joins
             Stream: special joins with Temporal table or external lookup table
 
+Flink runtime:  
 
-            https://developer.confluent.io/courses/apache-flink/stream-processing-exercise/
-            https://www.youtube.com/watch?v=FyTcSxuQ_2k
+    What happens when submitting a job:
+        When executing code with an API the api becomes the Client
+        When execute the client the API asseble the Job DAG and submit it to Job Manager
+        When Job Manager receive a job will refine and create the resources to run the job
+        The Job Manager will spinup Task Manager instances as needed to provide the desire parallelism
+        Each Task manager provide some tasks slows
+        Each Task slot can execute one parallel instace of the job Graph
+        When the job running the Job manager will coordinate the 
+                Check checkpointing 
+                Restar task manager if they failed
+
+        Task managers take the data from the source, transformed
+        They can also exchange data between them for repartition or rebalance
+        Finally Task managers sink the data to the output stream
+
+    Streaming vs Batch:
+
+        Stream support bounded and unbounded stream
+        Batch support onlu bounded streams
+
+        In stream the entire pipeline must always running
+        In batch execution proceeds in stages running as needed
+
+        In stream input must processed as it arrivews
+        In batch may be pre-sorted by btime and key (to make faster joins..)
+
+        In stream results are reported as they become ready
+        In batch results are reportedat the end
+
+        In stream failure recovery resumes from the recent snapshot
+        In batch failure does a reset and full restart
+
+        Flink guarantees exactly-one results despite out-of-order data and failures
+
+Stateful Processing:
+
+    WHERE, SELECT and transformations does not require state (STATELESS)
+    Aggregations (GROUP BY), JOINS  are operations that require state
+    Each Node maintains at a data store the state for each value which is responsible
+
+    State: In streaming has to handle it (not in batch mode)
+        Each Node store the state Local
+        Periodically Flink checkpooint the state to remode durable storage (s3)
+
+        If State has unbounded number of data at some point the data store will be full and flink job will fail
+
+        Temporal (safely stateful): Use TUBLE in query to specify windowed aggregations
+            time-windowd aggregations
+            interval joins
+            time-versioned joins
+            MATCH_RECOGNIZE (pattern matching)
+                
+
+            
+https://developer.confluent.io/courses/apache-flink/timely-stream-processing/

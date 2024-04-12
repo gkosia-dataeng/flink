@@ -1,49 +1,60 @@
 version: '2'
 services:
-  flink-jobmanager:
-      image: cnfldemos/flink-kafka:1.16.0-scala_2.12-java11
-      hostname: flink-jobmanager
-      container_name: flink-jobmanager
-      ports:
-        - 9081:9081
-      command: jobmanager
-      environment:
-        - |
-          FLINK_PROPERTIES=
-          jobmanager.rpc.address: flink-jobmanager
-          rest.bind-port: 9081
-      networks:
-        - dataeng-data-platform
-
-  flink-sql-client:
-      image: cnfldemos/flink-sql-client-kafka:1.16.0-scala_2.12-java11
-      hostname: flink-sql-client
-      container_name: flink-sql-client
-      depends_on:
-        - flink-jobmanager
-      environment:
-        FLINK_JOBMANAGER_HOST: flink-jobmanager
-      volumes:
-      - ./settings/:/settings
-      networks:
-        - dataeng-data-platform
-  
-  flink-taskmanager:
-      image: cnfldemos/flink-kafka:1.16.0-scala_2.12-java11
-      hostname: flink-taskmanager
-      container_name: flink-taskmanager
-      depends_on:
-      - flink-jobmanager
-      command: taskmanager
-      scale: 1
-      environment:
+  sql-client:
+    build: sql-client/.
+    command: bin/sql-client.sh
+    depends_on:
+      - jobmanager
+    environment:
       - |
         FLINK_PROPERTIES=
-        jobmanager.rpc.address: flink-jobmanager
-        taskmanager.numberOfTaskSlots: 10
-      networks:
-        - dataeng-data-platform
+        jobmanager.rpc.address: jobmanager
+        rest.address: jobmanager
+    networks:
+      - dataeng-data-platform
+
+  jobmanager:
+    build: sql-client/.
+    ports:
+      - "8081:8081"
+    command: jobmanager
+    volumes:
+      - flink_data:/tmp/
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+        state.backend: filesystem
+        state.checkpoints.dir: file:///tmp/flink-checkpoints
+        heartbeat.interval: 1000
+        heartbeat.timeout: 5000
+        rest.flamegraph.enabled: true
+        web.backpressure.refresh-interval: 10000
+    networks:
+      - dataeng-data-platform
+        
+  taskmanager:
+    build: sql-client/.
+    depends_on:
+      - jobmanager
+    command: taskmanager
+    volumes:
+      - flink_data:/tmp/
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 3
+        state.backend: filesystem
+        state.checkpoints.dir: file:///tmp/flink-checkpoints
+        heartbeat.interval: 1000
+        heartbeat.timeout: 5000
+    networks:
+      - dataeng-data-platform
 
 networks:
   dataeng-data-platform:
     external: true
+
+volumes:
+  flink_data:
