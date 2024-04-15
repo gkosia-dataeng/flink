@@ -124,4 +124,49 @@ Stateful Processing:
                 
 
             
-https://developer.confluent.io/courses/apache-flink/timely-stream-processing/
+Event time and watermarks: 
+    watermarks make sense Only when we use Event time
+    Watermark is like report the event happened on a specific window
+
+    Event time: the time the event originated to the source
+    Process time: event arrived to the reltime processing engine
+
+    When processing based on Event time we might have out of order data
+    In order to decide when the final calculation of the window will be we use the out-of-orderness estimate 
+    Each watermark is the max timestamp seen so far - out-of-orderness
+
+    Flink watermerk generator insert watermarks in the event stream
+    Watermark messasge is an assumption that stream processed completed up to but ton include timestamp seen so far - out-of-orderness
+    Events with event time before watermark considered as late events (ignored be default, use Datastream API to handle them custom)
+    We will finalise the window calculation after we see watermarks after the window end time
+
+    Watermark generator runs inside Flink kafka consumer
+    Every 200ms the Watermark generator will generate a watermark
+    Watermark generator will calculate the watermark from each partition is consuming
+    The watermark the generator producing is the minimum of the watermarks of each partition
+
+    If a partition does not reported any events then the watermark will be No WM
+    If i have a partition with No WM then consumer will report No WM for all its partitions
+    No WM vs 1:05  ===> No WM (like null)
+
+
+Checkpoint and Recovery:
+
+    To recover from failure Flink takes Snapshots of the State
+    Snapshots are stored on a durable storage like s3
+        Checkpoint:  
+            Are managed from Flink
+            Used to recover in case of failure
+            Format is optimize to speedup recovery
+        Savepoint:  
+            Are manual snapshots created for some operational purpose( upgrade to new version,deploy new version of app, ..)
+
+
+    Each operator contribute to the checkpoint
+        Source operator: write the offsets of the topics
+        Filter: filter does not contribute to the checkpoint
+        Count:  counters or each element
+        Sink: ids of commited transactions
+
+
+    In case of recovery the phole cluster will need to restart from the point of the most recent snapshot
