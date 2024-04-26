@@ -169,4 +169,4 @@ Checkpoint and Recovery:
         Sink: ids of commited transactions
 
 
-    In case of recovery the phole cluster will need to restart from the point of the most recent snapshot
+    In case of recovery the whole cluster will need to restart from the point of the most recent snapshot
