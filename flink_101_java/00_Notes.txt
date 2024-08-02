@@ -1,0 +1,70 @@
+https://developer.confluent.io/courses/flink-java/overview/
+
+Datastream programming:
+    Process the records as they arrive
+    The event pushed to a series of Operators connected to a DAG
+    Each operator perform a transformation and out put the event
+
+    Manage state:
+        Events might interconnected so we have to keep the state
+        Flink help us to define statefull operations
+
+Flink job lifecycle:
+
+    A unit of work in flink called job
+    A job can be written to SQL,Python, JAVA
+    If is Java then the job will packaged to a jar file and deployed to Flink Cluster
+
+    A job has one or many Operations
+
+    Java job:
+
+        Create a job:
+            1. The job entry point is the main (public static void main) method of the project
+            2. The job need the StreamExecutionEnvironment object 
+            3. The job defines the steps of the stream
+
+            The main method is registered as entry point in the manifest file 
+        Run the job:
+
+               flink run <jar file path> 
+
+            if entry point didnt declared in the manifest we can execute:
+                my.package.MyClass: class contains the main method
+                flink run -c my.package.MyClass <jar file path>
+
+            --detached: run the job in detach mode 
+
+            Cancel a job:
+                <job id>: will be return from flink run command
+                flink cancel <job id>
+
+            Stop job:
+                --savepointPath: where to store the state in order to resume later
+                flink stop --savepointPath <folder path> <job id>
+            
+            Resuming a job:
+                --fromSavePoint: resume from saved state 
+                flink run --fromSavePoint <folder path> <job id>
+        Life cycle:
+            Run --->
+            Created: the cluster seen the job but didnt allocated resources yet
+            Schedule ->
+            Running: job manager assign resources (allocate tasks slots) to the job
+            
+            Finish -> if its not operating in infinite source and consumed all elements 
+            Canceled: we have run the Cancele comand to terminate a continusly job
+                    the job cannot resume, i can initiate a new instance
+            Suspended: after run the stop command
+            Created: when resume a job it will go back to Created and wit for schedule
+
+            Failing: if failed and the reason is not restartable
+            Failed: failed
+
+    Restart job:
+
+        Strategy: 
+            there is global configuration or can be set at job level using the setRestartStrategy
+                fixed-delay
+                failure-rate
+                exponential-delay
