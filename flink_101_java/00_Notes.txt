@@ -68,3 +68,91 @@ Flink job lifecycle:
                 fixed-delay
                 failure-rate
                 exponential-delay
+
+Flink job anatomy:
+
+    Data Source: source of data (kafka topic,log files, databases..)
+                 finite data source: if we consume all events from the source then the stream will close
+                 infinite data source: continue to consuming as long the data source exists
+                
+                 Methods:
+                    for testing:
+                        fromElements: to read from a finite source
+                        DataGeneratorSource: each time requested data it will send a record based on a function
+                            (
+                                index -> <function>
+                                numRecords: limit on how many rows to send
+                                rate limit per secodn
+                                type: data type
+                            )
+                    prod sources:
+
+                        FileSource: stream records one at a time
+                            (
+                                Line format
+                                path of the file
+                            )
+
+                        KafkaSoruce:
+                            (
+                                 properties
+                                ,topics list
+                                ,deserializer
+                            )
+
+    Operators:  transform the stream (filter, redirect, aggregate, branch points, ..)
+    Datastream Backpressure: if one operator of the stream is slow, flink will notify the upstream operators until the source to not send more data 
+    Sink: destination 
+    Stream:
+        DataStream<Object> stream = env.fromSource(
+            source
+            watermark strategy
+            name of source
+        )
+
+
+Serialization and Deserialization:
+
+    External Serial/Deserial: when mesage comes from source or pushed to sink
+
+            JsonSerializationSchema<T>: serialize from java obkect to json
+            JsonDeserializationSchema<>(T.class): deserialize json to Java object
+
+            For some objects like JavaTimeModule that does not support serializetion, we have to createa ObjectMapper and register the Modulewith serializer
+    Internal: object transfered between Operators
+
+        If class comply with the rules of POJO then flink can serialize it more efficient
+        POJO: Plain Old Java Objects
+        Rules:
+            1. Class should be Public
+            2. Must have a parameter less default constructor
+            3. All fields must be public or accessible from gettters, setters methods
+            4. All fields in the class must be supported by an appropriate serializer
+
+            If class meet the criteria then flink wil use the faster POJO serializer
+            Otherwise will use the slower KRYO serializer 
+
+            iF KRYO serializer will be used then we can register Types with the serializer
+            I can also disable the kryo serializer but i have to maek sure that the Types support POJO 
+            Other than that Avro serializer is another good choise
+
+            Using POJO serializer we can support Schema Evolution
+
+
+        POJO should be simple, lightweight and perhaps implement basic methods like  toString(), equals(), and hashCode()
+
+Transformations:
+
+    Process function: takes an input and convert it to output
+
+            public class MyProcessFunction extends ProcessFunction<Input, Output>{
+
+                @Override
+                public void processElement{}: takes an element, context, and a collector which represent the output
+
+
+                In process function we can:
+                    1. Just to convert the Input object to output object
+                    2. Filter out the input object and not return Output object
+                    3. Based on one Input object to produce multiple Output objects
+                    https://developer.confluent.io/courses/flink-java/transforming-data/
