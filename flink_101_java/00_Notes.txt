@@ -142,17 +142,53 @@ Serialization and Deserialization:
         POJO should be simple, lightweight and perhaps implement basic methods like  toString(), equals(), and hashCode()
 
 Transformations:
-
-    Process function: takes an input and convert it to output
+    1. Define the Process function: takes an input and convert it to output
 
             public class MyProcessFunction extends ProcessFunction<Input, Output>{
 
                 @Override
-                public void processElement{}: takes an element, context, and a collector which represent the output
+                public void processElement(
+                     input: input object
+                    ,contxt: provides helper methods and objects
+                    ,colelctor: collection of zero or more output objects
+                ){}
 
 
                 In process function we can:
                     1. Just to convert the Input object to output object
                     2. Filter out the input object and not return Output object
                     3. Based on one Input object to produce multiple Output objects
-                    https://developer.confluent.io/courses/flink-java/transforming-data/
+
+                    Operations to transform:
+                        Map: based on one input produce a new output
+                        Flatmap: based on one input produce multiple outputs
+                        Filter: filter teh input based on condition
+                        keyBy:  partition the stream, each input might redirected to different task manager (shuffle)
+                        reduce: take the current input and combine it with previous element using a function 
+
+    2. Attach the process function to the stream
+
+            stream.process(new ProcessFunction())
+
+
+Sink:
+
+    1. Create a serializer for the output message
+
+            For kafka:
+                KafkaRecordSerializer<T>builder()
+                .setTopic("topic-name")
+                .setValueSerializationSchema()
+                .build()
+
+    2. Create the kafka sink
+
+            For kafka:
+                KafkaSink<T> sink = KafkaSink.<T>builder()
+                                    .setKafkaProducerConfig(conf)
+                                    .setRecordSerializer(serializer)
+                                    .setDeliveryGuarantee(DeliveryGuarantee.NONE) // NONE, AT_LEAST_ONCE, EXACTLY_ONCE 
+
+    3. Attach to stream
+
+            toSink(sink)

@@ -35,7 +35,7 @@ public class SkyOneAirlinesFlightData {
      }
 
 
-     @Override
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true; // if reference to the same instance
         if (o == null || getClass() != o.getClass()) return false; // is it is different Types
@@ -61,6 +61,20 @@ public class SkyOneAirlinesFlightData {
             '}';
     }
 
+
+    public FlightData toFlightData(){
+        FlightData output  = new FlightData();
+
+        output.emailAddress = emailAddress;
+        output.departureTime = flightDepartureTime;
+        output.departureAirportCode = iataDepartureCode;
+        output.arrivalTime = flightArrivalTime;
+        output.arrivalAirportCode = iataArrivalCode;
+        output.flightNumber = flightNumber;
+        output.confirmationCode = confirmation;
+
+        return output;
+    }
 
 }
 

@@ -2,5 +2,6 @@ gkosia/flink/java/SkyOneAirlinesFlightData.class
 gkosia/flink/java/models/SkyOneAirlinesFlightData.class
 gkosia/flink/java/SunsetAirFlightData.class
 gkosia/flink/java/DataGeneratorJob.class
+gkosia/flink/java/models/FlightData.class
 gkosia/flink/java/flightimporter/FlightImporterJob.class
 gkosia/flink/java/DataGenerator.class
