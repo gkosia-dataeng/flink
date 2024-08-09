@@ -5,7 +5,9 @@ import java.util.Objects;
 
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonFormat;
 
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class SunsetAirlinesFlightData {
     public String customerEmailAddress;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")

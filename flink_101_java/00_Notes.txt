@@ -227,3 +227,65 @@ Branch a stream:
 
                     For simple stateless operation is better to  apply a Map and convert to new type and then apply Union
                     For cases where the state must be maintain between the two stream we use CoProcess
+
+Windows and watermarks:
+
+    WindowAll: available on a non-key stream (stream not use keyBy Operation)
+            
+            stream.windowAll(timeWindow)
+
+
+            Run by a single task without parralelism
+
+    Window: when using a keyBy operator
+
+            stream.
+            keyBy(record -> record.key).
+            window(timeWindow)
+
+            Partitions the stream and run the partitions in parralell
+
+    Time windows:
+
+        Tumbling time windows: split time in specific windows size
+                               there is no overlap
+                               start time and end time of window is known
+
+                               TumblingEventTimeWindows.of(Time.seconds(5))
+
+        Sliding time: slide over time a specific window size
+
+                      SlidingEventTimeWindows.of(Time.seconds(10), Time.seconds(5))
+
+                      Window size: 10 seconds
+                      Window slide: 5 seconds   (how far to move)
+
+        Session window: session based on active/inactive
+                        start a session on a message arrive, if no message for x time sesion close
+
+                        EventTimeSessionWindows.withGap(Time.minutes(10))
+
+                        close the session if inactive for x Gap time
+
+
+    Watermarks:
+
+        Join streams: join two streams by a key and a window time
+                    .apply: JoinFuntion<Input1, Input2, Output> match the objects and output a message
+
+
+        Watermarks: to identify which messages goes to whitch windows
+                    watermarks are messges that travel in the stream to make sure stream is up to date
+
+                    Watermarks Strategies:
+                        WatermarksStrategy.noWatermerks(): dont care about timestamps, not suitable for windowing
+                        WatermarksStrategy.forMonotonousTimestaps(): timestamp strictly increasing and never out of order
+                                                                     suitable for messages coming from single-threaded process
+
+                        WatermarkStrategy.forBoundedOutOfOrderness(Duration.ofSeconds(10)): stream might be out of order within certain time constraint
+                                                                                            the stream introduce latency since it wait for time to elapse
+                                                                                            if a message comes after the watermark duration by default will be ignored
+                                                                                            another option is to push late arriving messages to other stream
+
+                                                                                            Flink will check the timestamp of the message for watermarks, 
+                                                                                            We can also use TimestampAssigner to customize the calculation of timestamps
