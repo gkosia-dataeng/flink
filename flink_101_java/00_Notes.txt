@@ -192,3 +192,38 @@ Sink:
     3. Attach to stream
 
             toSink(sink)
+
+
+Branch a stream:
+    
+        Fan-out: from the input split to multiple output
+                1. By assigning the operations on the stream to separate object we can sink each stream to sepatrate target sink 
+
+                    Datastream<T> out1 = stream.filter(...)
+                    Datastream<T> out2 = stream.filter(...).map()
+
+                2. Using Side outputs
+
+        Fan-in:  multiple inputs combined in one stream
+                 
+                Union:
+                      Takes two streams of the SAME DATA TYPE and union them into one stream
+                      union = stream1.union(streams2)
+
+                Connect:
+                     Takes two streams of DIFFERENT DATA TYPES and connect them to one
+                     connectstream = stream1.connect(stream2)
+
+                    Then we have to declare the CoProcessFunction which contains two process functions
+                    One for the input1 and one for the input2 objects
+                    The functions can be CoMapFunction and CoFlatMapFunction 
+                        connectstream.process(new CoProcessFunction<Inp1, Inp2, Output>)
+
+                Union vs Connect:
+
+                    The main difference is when you Map the objects to the new Type
+                    For Union the Map is before the Union operator
+                    For Connect we Map the object to the new type after the connect operator 
+
+                    For simple stateless operation is better to  apply a Map and convert to new type and then apply Union
+                    For cases where the state must be maintain between the two stream we use CoProcess

@@ -69,7 +69,7 @@ public class DataGeneratorJob {
 		
 		System.out.println("Started stream");
 
-		/* 
+		
 		DataGeneratorSource<SunsetAirFlightData> sunsetSource =
 				new DataGeneratorSource<>(
 						index -> DataGenerator.generateSunsetAirFlightData(),
@@ -95,7 +95,7 @@ public class DataGeneratorJob {
 		sunsetStream
 				.sinkTo(sunsetSink)
 				.name("sunset_sink");
-		*/
+		
 		env.execute("InputStreams");
 }
 

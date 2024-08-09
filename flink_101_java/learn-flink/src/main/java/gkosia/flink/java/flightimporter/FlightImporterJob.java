@@ -4,14 +4,16 @@ package gkosia.flink.java.flightimporter;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
+import org.apache.flink.streaming.api.datastream.ConnectedStreams;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-
+import org.apache.flink.streaming.api.functions.co.CoMapFunction;
 import java.io.InputStream;
 import java.time.ZonedDateTime;
 import java.util.Properties;
 
 import gkosia.flink.java.models.FlightData;
+import gkosia.flink.java.models.SunsetAirlinesFlightData;
 import gkosia.flink.java.models.SkyOneAirlinesFlightData;
 import org.apache.flink.formats.json.JsonDeserializationSchema;
 
@@ -42,8 +44,14 @@ public class FlightImporterJob {
             System.out.println("Failed to load consumer properties");
             e.printStackTrace();
         }
+        
 
-        KafkaSource<SkyOneAirlinesFlightData> ksource = KafkaSource.<SkyOneAirlinesFlightData>builder()
+        /*
+         * 
+         *  SkyOneAirlinesFlightData: read the SkyOne source messages
+         * 
+         */
+        KafkaSource<SkyOneAirlinesFlightData> ksource_skyone = KafkaSource.<SkyOneAirlinesFlightData>builder()
         .setProperties(consumerConfig)
         .setTopics("skyone")
         .setStartingOffsets(OffsetsInitializer.latest())
@@ -51,10 +59,30 @@ public class FlightImporterJob {
         .build();
         
 
-        DataStream<SkyOneAirlinesFlightData> stream = env.fromSource(
-         ksource  
+        DataStream<SkyOneAirlinesFlightData> stream_skyone = env.fromSource(
+         ksource_skyone  
         ,WatermarkStrategy.noWatermarks()
         ,"skyone_source");
+        
+
+        /*
+         * 
+         *  SunsetAirlinesFlightData: read the Sunset source messages
+         * 
+         */
+        KafkaSource<SunsetAirlinesFlightData> ksource_sunset = KafkaSource.<SunsetAirlinesFlightData>builder()
+        .setProperties(consumerConfig)
+        .setTopics("sunset")
+        .setStartingOffsets(OffsetsInitializer.latest())
+        .setValueOnlyDeserializer(new JsonDeserializationSchema(SunsetAirlinesFlightData.class))
+        .build();
+        
+
+        DataStream<SunsetAirlinesFlightData> stream_sunset = env.fromSource(
+            ksource_sunset  
+        ,WatermarkStrategy.noWatermarks()
+        ,"sunset_source");
+
 
 
         KafkaRecordSerializationSchema<FlightData> serializer =  KafkaRecordSerializationSchema.<FlightData>builder()
@@ -73,7 +101,7 @@ public class FlightImporterJob {
         .build();
 
 
-        defineWorkflow(stream)
+        defineWorkflow(stream_skyone, stream_sunset)
         .sinkTo(sink)
         .name("sink_data");
 
@@ -81,14 +109,50 @@ public class FlightImporterJob {
     }
 
 
-    public static DataStream<FlightData> defineWorkflow(DataStream<SkyOneAirlinesFlightData> skyOneSource ){
+    public static DataStream<FlightData> defineWorkflow(DataStream<SkyOneAirlinesFlightData> skyOneSource, DataStream<SunsetAirlinesFlightData> sunsetSource ){
         
-        DataStream<FlightData> outputStream;
+        // use the union
+        // map each stream to the common Type and then Union them
+        /*
 
-        outputStream = skyOneSource
-                .filter(flight -> flight.flightArrivalTime.isAfter(ZonedDateTime.now()))
-                .map(SkyOneAirlinesFlightData::toFlightData);
+        DataStream<FlightData> output_skyone, output_sunset;
 
-        return outputStream;
+         
+            output_skyone = skyOneSource
+                    .filter(flight -> flight.flightArrivalTime.isAfter(ZonedDateTime.now()))
+                    .map(SkyOneAirlinesFlightData::toFlightData);
+
+            output_sunset = sunsetSource
+                            .filter(flight -> flight.arrivalTime.isAfter(ZonedDateTime.now()))
+                            .map(SunsetAirlinesFlightData::toFlightData);
+
+
+            
+            return output_skyone.union(output_sunset);
+
+        */
+        // use the connect
+        // Connect the stream and then apply a CoMap function to Mapo them to the new Type
+        DataStream<SkyOneAirlinesFlightData> output_skyone = skyOneSource
+                    .filter(flight -> flight.flightArrivalTime.isAfter(ZonedDateTime.now()));
+
+        DataStream<SunsetAirlinesFlightData> output_sunset = sunsetSource
+                    .filter(flight -> flight.arrivalTime.isAfter(ZonedDateTime.now()));
+                                                 
+        DataStream<FlightData> stream = output_skyone.
+                                        connect(output_sunset).
+                                        map(new CoMapFunction<SkyOneAirlinesFlightData,SunsetAirlinesFlightData,FlightData>(){
+                                                    @Override
+                                                    public FlightData map1(SkyOneAirlinesFlightData f){
+                                                        return f.toFlightData();
+                                                    }
+
+                                                    @Override
+                                                    public FlightData map2(SunsetAirlinesFlightData f){
+                                                        return f.toFlightData();
+                                                    }
+                                                 });
+
+        return stream;
     }
 }
