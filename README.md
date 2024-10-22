@@ -9,3 +9,8 @@ https://developer.confluent.io/tutorials/#master-advanced-concepts
 docker compose run sql-client
 
 
+
+
+
+AWS fin data
+https://github.com/aws-samples/msk-powered-financial-data-feed
