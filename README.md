@@ -19,3 +19,6 @@ Aws managed flink, tf: https://jaehyeon.me/blog/2023-09-04-getting-started-with-
 
 
 Pyflink demos: https://github.com/jaehyeon-kim/flink-demos
+
+
+Flink Quick tips: https://www.youtube.com/watch?v=1ezf3OyLz3w
