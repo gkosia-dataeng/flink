@@ -22,3 +22,6 @@ Pyflink demos: https://github.com/jaehyeon-kim/flink-demos
 
 
 Flink Quick tips: https://www.youtube.com/watch?v=1ezf3OyLz3w
+
+
+Flink 1.19:   https://nightlies.apache.org/flink/flink-docs-release-1.19/docs/connectors/table/kafka/
