@@ -1,3 +1,12 @@
+# Flink learn:
+
+  Master Real-time Data Pipelines with Kafka and Flink - 3 hr Course: https://www.youtube.com/watch?v=dzB0HMtMIfI
+	Flink Forward Jakarta 2024: Apache Flink 101: https://www.youtube.com/watch?v=1bjvkdhX4Vk
+	Flink demos: https://github.com/jaehyeon-kim/flink-demos
+
+
+
+
 # flink
 
 https://developer.confluent.io/courses/apache-flink/intro/
