@@ -1,5 +1,5 @@
 # Flink learn:
-
+Joins: https://www.ververica.com/blog/flink-sql-joins-part-1
   Master Real-time Data Pipelines with Kafka and Flink - 3 hr Course: https://www.youtube.com/watch?v=dzB0HMtMIfI
 	Flink Forward Jakarta 2024: Apache Flink 101: https://www.youtube.com/watch?v=1bjvkdhX4Vk
 	Flink demos: https://github.com/jaehyeon-kim/flink-demos
