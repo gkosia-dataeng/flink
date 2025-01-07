@@ -1,0 +1,29 @@
+SQL Joins:
+
+  https://www.ververica.com/blog/flink-sql-joins-part-1
+  
+  Regular Joins: retain every input row as part of the join to potentially join it with the other table in the future
+  
+  Interval Joins: join considering a specific interval to reduce the records needed in state
+  	
+  	each set is divided into intervals (start and end time)
+  	
+  	join the input based on an interval of the other set
+  	
+  	FROM orders o
+  	JOIN shipments s ON o.id = s.order_id
+  	WHERE
+  	  o.order_time BETWEEN s.shipment_time - INTERVAL '3' DAY AND s.shipment_time;
+  	  
+  	  
+  Lookup Joins: join with  a static set 
+  	
+  			  The join requires one table to have a processing time attribute and the other table to be backed by a lookup source connector, like the JDBC connector.
+  			  The lookup join also requires an equality join predicate based on the PRIMARY KEY of the lookup table (usub.user_id = u.user_id)
+  			  
+  			  
+  			  
+  			  FROM subscriptions usub
+  			  JOIN users FOR SYSTEM_TIME AS OF usub.proc_time AS u
+  			    ON usub.user_id = u.user_id;
+  			
