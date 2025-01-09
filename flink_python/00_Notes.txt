@@ -1,0 +1,185 @@
+https://nightlies.apache.org/flink/flink-docs-master/docs/dev/python/overview/
+
+
+/*
+    submit a pyflink job: https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/cli/#submitting-pyflink-jobs
+
+        ./bin/flink run --python examples/python/table/word_count.py
+
+
+        ./bin/flink run \
+        --jobmanager localhost:8081 \
+        -py examples/python/table/word_count.py \
+        --python /usr/bin/python3
+*/
+
+Table API: similar to relational queries or tabular data in Python
+DataStream API: lower level control on flink building blocks like state and time (more complex stream processing)
+
+
+
+https://quix.io/blog/pyflink-deep-dive:
+
+    Table api:
+
+        1. Create the execution environment: main entry point to flink environment
+        2. Define source tables, and sink tables
+        3. Write the transformation logic:
+
+            Operators: Shape the table structure: https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/dev/table/tableapi/#operations
+                Column operator: add, replace, remove, rename columns
+                Row based: map
+                Aggregation: group by
+                Joins: inner, outer, interval joins
+                Windowing: sliding, tumbling, group
+
+            Functions: transform data in tables  build-in : https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/dev/table/functions/systemfunctions/
+                                                 udfs:      https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/dev/python/table/udfs/overview/
+                        Udfs categories: 
+                            Scalar: maps 0 or more values to one value
+                            Table:  takes 0 or more scalar values and return a number of rows 
+                            Aggregate: maps 0 or more values to one value
+                            Table aggregation: maps a scalar values of multiple rows to multiple rows  
+                
+        // take reference to the table
+        transactions = t_env.from_path("kafka_source")
+
+        transactions.execute_insert("kafka_sink").wait()
+
+    Datastream api:
+
+        https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/concepts/stateful-stream-processing/
+        https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/dev/datastream/fault-tolerance/state/
+
+
+            Operators: https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/dev/datastream/operators/overview/
+
+                Map: transform an element and output another element
+                FlatMap: one element to one or more elements
+                Filter: filter
+                KeyBy: logically partitions the stream, used in group by and keyd process functions
+                Reduce: applies a reduce function on consecutive elements in a keyd stream to produce rolling aggregations
+                Window join: join two streams on a key an a common window
+                Interval join: join stream based on time boundaries
+                Windowing: TUMBLING, SLIDING, SESSION, GLOBAL
+
+            Implement custom functions options:
+                1. Implement function interfaces MapFunction  for Map, FilterFunction  for Filter (class that implement the interface and contains the method)
+                2. Define the functionality as Lambda function
+                3. Use python function to implement the logic
+
+    Handling dependencies:  https://nightlies.apache.org/flink/flink-docs-release-1.18/docs/dev/python/dependency_management/#requirementstxt
+
+            To add jar files:
+
+                # Table API
+                table_env.get_config().set("pipeline.jars", "file:///my/jar/path/connector.jar;file:///my/jar/path/udf.jar")
+                # DataStream API
+                stream_execution_environment.add_jars("file:///my/jar/path/connector1.jar", "file:///my/jar/path/connector2.jar")
+            
+            To add python files:
+
+                # Table API
+                table_env.add_python_file(file_path)
+                # DataStream API
+                stream_execution_environment.add_python_file(file_path)
+
+            To add additional third party python libraries:
+
+                table_env.set_python_requirements(
+                    requirements_file_path="/path/to/requirements.txt",
+                    requirements_cache_dir="cached_dir")
+
+                stream_execution_environment.set_python_requirements(
+                    requirements_file_path="/path/to/requirements.txt",
+                    requirements_cache_dir="cached_dir")
+
+            If using both apis in the same job by specifying the dependencies in datastream api is enough  to work for both
+
+    Data conversions:
+
+        Pandas <--> Flink table: table = t_env.from_pandas(pdf) <--> pdf = table.limit(100).to_pandas()
+        Table  <--> Stream     : Table inputTable = tableEnv.fromDataStream(dataStream); <--> DataStream<Row> resultStream = tableEnv.toDataStream(resultTable)
+
+
+    Debug a flink job:
+
+        Using logging modele logs will appear on logs on TaskManager
+
+    Deploy flink jobs:
+
+        UDF run modes: 
+            table_env.get_config().set("python.execution-mode", "process")
+            # Specify `THREAD` mode
+            table_env.get_config().set("python.execution-mode", "thread")
+
+            process: udf executed in separate python process, better resource isolation
+            thread:  udf executed in threads withing flink jvm process, higher throughput, lower latencies 
+
+    Scalability and tolerance:
+
+        Fault tolerance: 
+            checkpoints: checkpoint periodically and capture the state of processing tasks, recovery from most recent checkpoint
+            savepoints: triggered manually to create snapshots of application state (for planned operation, flink updates)
+
+        Monitor:
+
+            Metrics from webUI for throughput, latency, backpressure and memory usage
+
+    Architecture and Internals:
+
+        Client: is not part of the runtime, used to prepare the dataflow and send it to JobManager
+                after the submission can disconnect(detached mode) or stay and receve progress reports(attached)
+                client can run as part of Jave/Scala program or in the commandline process  ./bin/flink run 
+
+        Jobmanager: coordinating and distyribute the execution
+            Components:
+                Resourcemanager: resources allocation/deallocation in flink cluster
+                                 manage the tasks slots
+
+                Dispacher: provide rest api to submit flink applications
+                           start JobMaster for each job
+                           runs the webUI
+                
+                JobMaster: manage the execution of a single jobGraph
+                           each job has its own JobMaster
+
+        TaskManager: execute tasks of a dataflow, buffer and exchange data streams
+                     smallest unit of execution is one slot (fixed subset of resources if 3 slots then 1/3 from memory of taskmanager, cpu is not isolated)
+                     the number of tasks slots in a TaskManagerindicate the number of concurrent processing tasks
+
+
+
+        Tasks and Operator:
+
+            Operator subtasks chaned together to a Task
+            Each task executed by one thread
+
+            Having one slot per TaskManager means that each taskgroup runs in separate jvm.
+            Having multiple slots means that subtasks share the same jvm. 
+            JVM shares TCP connections, hearbeat messages, datasets and data strucutres
+            Having slots reduce the overhead per task
+    
+    
+    Flink execution:    
+
+        A Flink application is any program that trigger a flink job from its main()
+
+        Cluster types:
+
+            Flink Application Cluster:
+                A cluster is dedicated for a single job
+                Dont need to start first separate cluster and submit the job
+                Package the program and dependencies into a jar
+                Run the flink job as other application (on k8..) 
+                Lifetime of flink cluster bound to lifetime of flink application
+
+            Flink Session Cluster:
+
+                A pre-existing long running cluster already exists
+                Client submit the aplpication to the cluster
+                The cluster continues to run until manually stoped
+                TaskManager slots are allocated by the ResourceMnager and released after the execution of the job
+
+
+**** https://quix.io/blog/pyflink-deep-dive#pyflinks-architecture-and-internals

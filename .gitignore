@@ -1,4 +1,4 @@
-pyflink/.venv/
-pyflink/.venv/*
-pyflink/flink-bins/
-pyflink/flink-bins/*
+flink_python/.venv/
+flink_python/.venv/*
+flink_python/flink-bins/
+flink_python/flink-bins/*
