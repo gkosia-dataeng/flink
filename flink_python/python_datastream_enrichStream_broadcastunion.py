@@ -4,7 +4,7 @@ import logging
 from pyflink.datastream.functions import BroadcastProcessFunction, CoProcessFunction
 from pyflink.datastream.state import MapStateDescriptor
 from pyflink.common.typeinfo import Types
-
+from datetime import timedelta
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -13,9 +13,10 @@ logger = logging.getLogger(__name__)
 
 
 union_brdcst_messages_state_descr = MapStateDescriptor("union_brdcst_messages", Types.STRING(), Types.TUPLE([Types.LONG(),Types.LONG(),Types.LONG(), Types.STRING(), Types.LONG(), Types.STRING(), Types.STRING()]))
-order_details_descr = MapStateDescriptor("orders_details",   Types.LONG(), Types.TUPLE([Types.LONG(), Types.STRING()]) )
-orders_enriched_descr =MapStateDescriptor("orders_enriched", Types.LONG(), Types.TUPLE([Types.LONG(), Types.STRING(), Types.LONG(), Types.STRING()]) )
-
+position_descr = MapStateDescriptor("position", Types.LONG(), Types.TUPLE( [Types.STRING(), Types.LONG()]))
+order_descr = MapStateDescriptor("order",   Types.LONG(), Types.TUPLE([Types.LONG(), Types.STRING(), Types.SQL_TIMESTAMP()]) )
+order_enriched_descr =MapStateDescriptor("order_enriched", Types.LONG(), Types.TUPLE([Types.LONG(), Types.STRING(), Types.LONG(), Types.STRING()]) )
+deal_descr = MapStateDescriptor("deal", Types.LONG(), Types.TUPLE([Types.LONG(), Types.DOUBLE(), Types.SQL_TIMESTAMP(), Types.SQL_TIMESTAMP()]) )
 
 class BroadcastEnrichmentInfo(BroadcastProcessFunction):
 
@@ -37,7 +38,8 @@ class BroadcastEnrichmentInfo(BroadcastProcessFunction):
         else:
             key = None
             logger.info(f"joiner - process_broadcast_element - BroadcastEnrichmentInfo: Received {data} but not matched with a type")
-
+        
+        # replace None values because is trying to encode and cannot encode None  
         if key:
             state_value  = (
                   data['trader_id'] if data['trader_id'] is not None else -99
@@ -55,7 +57,7 @@ class BroadcastEnrichmentInfo(BroadcastProcessFunction):
 
     def process_element(self, position, ctx):
         
-        logger.info(f"joiner - process_element: {str(position)}")
+        logger.info(f"joiner - process_element - BroadcastEnrichmentInfo: {str(position)}")
         symbol_id = "s_" + str(position[1])
         trader_id = "t_" + str(position[2])
         
@@ -87,64 +89,109 @@ class BroadcastEnrichmentInfo(BroadcastProcessFunction):
 class PositionsOrdersJoin(CoProcessFunction):
 
     def open(self, runtime_context):
-        self.orders_state = runtime_context.get_map_state(order_details_descr)
+        self.orders_state = runtime_context.get_map_state(order_descr)
+        self.positions_state = runtime_context.get_map_state(position_descr)
 
     def process_element1(self, position, ctx):
-        order_info = self.orders_state.get(position['position_id'])
 
-        if order_info:
-            position['order_id'] = order_info[0]
-            position['type'] = order_info[1]
+        # one position can have many orders, so store the postion in state
+        self.positions_state.put(position['position_id'], (position['symbol'], position['login']))
+
+        order = self.orders_state.get(position['position_id'])
+
+        if order:
+            position['order_id'] = order[0]
+            position['type'] = order[1]
+            position['update_time'] = order[2]
             logger.info(f"joiner - process_element1 - PositionsOrdersJoin : Position match with order: {position}")
+            self.orders_state.remove(position['position_id'])
             return [position]
-        else:
-            logger.info(f"joiner - process_element1 - PositionsOrdersJoin : Enriched order not found: {position}")
-            
 
     def process_element2(self, order, ctx):
-        self.orders_state.put(order['position_id'], (order['order_id'], order['type'],))
-        logger.info(f"joiner - process_element2 - PositionsOrdersJoin : Order stored in state: {order}")
 
+        position = self.positions_state.get(order['position_id'])
 
+        if position:
+            position_enriched = {
+                 "position_id": order['position_id']
+                ,"symbol": position[0]
+                ,"login": position[1]
+                ,"order_id": order['order_id']
+                ,"type": order['type']
+                ,"update_time": order['update_time']
+            }
 
+            logger.info(f"joiner - process_element2 - PositionsOrdersJoin : Order enriched from position: {order}")
+            return [position_enriched]
+        else:
+            self.orders_state.put(order['position_id'], (order['order_id'], order['type'],order['update_time']))
+            logger.info(f"joiner - process_element2 - PositionsOrdersJoin : Position not found, order stored in state: {order}")
 
 
 class OrdersDealsJoin(CoProcessFunction):
     
     def open(self, runtime_context):
-        self.orders_state = runtime_context.get_map_state(orders_enriched_descr)
-
+        self.orders_state = runtime_context.get_map_state(order_enriched_descr)
+        self.deal_state =  runtime_context.get_map_state(deal_descr)
+    
+    
     def process_element1(self, deal, ctx):
         order = self.orders_state.get(deal['order_id'])
 
 
         if order:
-            position_id = order[0]
-            symbol = order[1]
-            login = order[2]
-            type = order[3]
 
             msg = {
                  "deal_id": deal['deal_id']
                 ,"order_id": deal['order_id']
-                ,"position_id": position_id
-                ,"symbol": symbol
-                ,"login": login
-                ,"type": type
+                ,"position_id": order[0]
+                ,"symbol": order[1]
+                ,"login": order[2]
+                ,"type": order[3]
                 ,"profit": deal['profit']
                 ,"create_date": deal['create_date']
                 ,"update_time": deal['update_time']
             }
 
             logger.info(f"joiner - process_element1 -  OrdersDealsJoin: Deal enriched {msg}")
+            self.orders_state.remove(deal['order_id'])
             return [msg]
         else:
-            logger.info(f"joiner - process_element1 -  OrdersDealsJoin: Order info not found for deal {deal['deal_id']}")
+            self.deal_state.put(deal['order_id'], (deal['deal_id'], deal['profit'], deal['create_date'], deal['update_time']))
+            logger.info(f"joiner - process_element1 -  OrdersDealsJoin: Order not found, deal stored in state {deal['deal_id']}")
 
 
     def process_element2(self, order, ctx):
-        logger.info(f"joiner - process_element2 -  OrdersDealsJoin: Enriched Order stored in state {order}")
-        self.orders_state.put(order['order_id'], (order['position_id'], order['symbol'],order['login'], order['type']))
+        
+        deal = self.deal_state.get(order['order_id'])
+
+        if deal:
+
+            msg = {
+                 "deal_id": deal[0]
+                ,"order_id": order['order_id']
+                ,"position_id": order['position_id']
+                ,"symbol": order['symbol']
+                ,"login": order['login']
+                ,"type":  order['type']
+                ,"profit": deal[1]
+                ,"create_date": deal[2]
+                ,"update_time": deal[3]
+            }
+
+            self.deal_state.remove(order['order_id'])
+            logger.info(f"joiner - process_element2 -  OrdersDealsJoin: Deal enriched {msg}")
+            return  [msg]
+        else:
+            self.orders_state.put(order['order_id'], (order['position_id'], order['symbol'],order['login'], order['type']))
+            logger.info(f"joiner - process_element2 -  OrdersDealsJoin: Deal not found, order stored in state {order}")
+            event_time = order['update_time']
+            ctx.timer_service().register_event_time_timer((event_time + timedelta(minutes=10)).timestamp() * 1000) # drop order after 10 mins if deal dont come
+
+    def on_timer(self, timestamp, ctx):
+        logger.info(f"joiner - on_timer - OrdersDealsJoin: timer fired, cleaning order from state")
+        self.orders_state.clear() # clear the record of specific key from the state
+
 
 
 
