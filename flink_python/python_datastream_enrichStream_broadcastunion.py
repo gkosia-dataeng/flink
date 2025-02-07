@@ -42,7 +42,7 @@ class BroadcastEnrichmentInfo(BroadcastProcessFunction):
         # replace None values because is trying to encode and cannot encode None  
         if key:
             state_value  = (
-                  data['trader_id'] if data['trader_id'] is not None else -99
+                 data['trader_id'] if data['trader_id'] is not None else -99
                 ,data['login']  if data['login'] is not None else -99
                 ,data['trader_group_id']  if data['trader_group_id'] is not None else -99
                 ,data['trader_group_name']  if data['trader_group_name'] is not None else ""
