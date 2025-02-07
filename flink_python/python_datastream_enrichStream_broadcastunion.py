@@ -1,23 +1,89 @@
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.table import StreamTableEnvironment
-import logging
 from pyflink.datastream.functions import BroadcastProcessFunction, CoProcessFunction
 from pyflink.datastream.state import MapStateDescriptor
 from pyflink.common.typeinfo import Types
 from datetime import timedelta
 
+import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 
 
-union_brdcst_messages_state_descr = MapStateDescriptor("union_brdcst_messages", Types.STRING(), Types.TUPLE([Types.LONG(),Types.LONG(),Types.LONG(), Types.STRING(), Types.LONG(), Types.STRING(), Types.STRING()]))
-position_descr = MapStateDescriptor("position", Types.LONG(), Types.TUPLE( [Types.STRING(), Types.LONG()]))
-order_descr = MapStateDescriptor("order",   Types.LONG(), Types.TUPLE([Types.LONG(), Types.STRING(), Types.SQL_TIMESTAMP()]) )
-order_enriched_descr =MapStateDescriptor("order_enriched", Types.LONG(), Types.TUPLE([Types.LONG(), Types.STRING(), Types.LONG(), Types.STRING()]) )
-deal_descr = MapStateDescriptor("deal", Types.LONG(), Types.TUPLE([Types.LONG(), Types.DOUBLE(), Types.SQL_TIMESTAMP(), Types.SQL_TIMESTAMP()]) )
+union_brdcst_messages_state_descr = MapStateDescriptor(
+         "union_brdcst_messages"
+        ,Types.STRING()
+        ,Types.TUPLE(
+            [
+                 Types.LONG()
+                ,Types.LONG()
+                ,Types.LONG()
+                ,Types.STRING()
+                ,Types.LONG()
+                ,Types.STRING()
+                ,Types.STRING()
+            ]
+        )
+)
 
+position_descr = MapStateDescriptor(
+         "position"
+        ,Types.LONG()
+        ,Types.TUPLE(
+             [
+                  Types.STRING()
+                 ,Types.LONG()
+            ]
+        )
+)
+
+order_descr = MapStateDescriptor(
+        "order"
+        ,Types.LONG()
+        ,Types.TUPLE(
+            [
+                 Types.LONG()
+                ,Types.STRING()
+                ,Types.SQL_TIMESTAMP()
+            ]
+        )
+)
+
+order_enriched_descr =MapStateDescriptor(
+         "order_enriched"
+        ,Types.LONG()
+        ,Types.TUPLE(
+            [
+                 Types.LONG()
+                ,Types.STRING()
+                ,Types.LONG()
+                ,Types.STRING()
+            ]
+        )
+)
+
+deal_descr = MapStateDescriptor(
+     "deal"
+    ,Types.LONG()
+    ,Types.TUPLE(
+        [
+             Types.LONG()
+            ,Types.DOUBLE()
+            ,Types.SQL_TIMESTAMP()
+            ,Types.SQL_TIMESTAMP()
+        ]
+    )
+)
+
+'''
+    Used to join position stream with broadcasted messages of trader, trader group and symbol
+    Broadcasted elements stored in the same state because i couldnt connect multiple broadcasted stream with another stream
+
+    When receiving a broadcasted message we will store it in state
+    When reveiving a position message we will enrich it and we will keep it in state for the fitire orders 
+'''
 class BroadcastEnrichmentInfo(BroadcastProcessFunction):
 
     def __init__(self, union_brdcst_messages_state_descr):
@@ -25,7 +91,7 @@ class BroadcastEnrichmentInfo(BroadcastProcessFunction):
 
     # trader or symbol or trader group
     def process_broadcast_element(self, data, ctx):
-        logger.info(f"joiner - process_broadcast_element: {data}")
+        logger.info(f"joiner - process_broadcast_element: Received {data}")
 
         state = ctx.get_broadcast_state(self.union_brdcst_messages_state_descr)
 
@@ -57,7 +123,7 @@ class BroadcastEnrichmentInfo(BroadcastProcessFunction):
 
     def process_element(self, position, ctx):
         
-        logger.info(f"joiner - process_element - BroadcastEnrichmentInfo: {str(position)}")
+        logger.info(f"joiner - process_element - BroadcastEnrichmentInfo:Received postion message {str(position)}")
         symbol_id = "s_" + str(position[1])
         trader_id = "t_" + str(position[2])
         
@@ -69,14 +135,19 @@ class BroadcastEnrichmentInfo(BroadcastProcessFunction):
 
         state = ctx.get_broadcast_state(self.union_brdcst_messages_state_descr)
 
-        # enrich from symbol
+        # enrich from symbol and trader
         symbol = state.get(symbol_id)
         trader = state.get(trader_id)
 
 
         if symbol and trader:
-            enriched_position["symbol"] = symbol[5]
-            enriched_position["login"] = trader[1]
+
+            trader_group = state.get(trader[2])
+
+            if trader_group:
+                enriched_position["group_name"] = trader_group[3]
+                enriched_position["symbol"] = symbol[5]
+                enriched_position["login"] = trader[1]
 
             logger.info(f"joiner - process_element - BroadcastEnrichmentInfo: Successfully enriched position {enriched_position}")
             return [enriched_position]
