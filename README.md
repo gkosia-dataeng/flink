@@ -4,7 +4,7 @@ Joins: https://www.ververica.com/blog/flink-sql-joins-part-1
 	Flink Forward Jakarta 2024: Apache Flink 101: https://www.youtube.com/watch?v=1bjvkdhX4Vk
 	Flink demos: https://github.com/jaehyeon-kim/flink-demos
 
-
+********** Flink playlist: https://www.youtube.com/playlist?list=PLD6DcxwkW8BcbMSbNWeg_xKhS3kS5DQcB
 
 
 # flink
