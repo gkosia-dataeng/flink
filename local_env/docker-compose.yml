@@ -1,0 +1,111 @@
+version: '2'
+services:
+  sql-client:
+    build: .
+    command: bin/sql-client.sh
+    depends_on:
+      - flinkjobmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flinkjobmanager
+        rest.address: flinkjobmanager
+    networks:
+      - flink-local-env
+
+  flinkjobmanager:
+    build: .
+    ports:
+      - "8081:8081"
+    command: jobmanager
+    volumes:
+      - ../02_Flink_Table_api/:/home/jobs/02_Flink_Table_api/
+      - ../03_Flink_Datastream_api/:/home/jobs/03_Flink_Datastream_api/
+      - ../python_classes/:/usr/local/lib/python3.11/site-packages/python_classes/
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flinkjobmanager
+    networks:
+      - flink-local-env
+    
+
+  flinktaskmanager:
+    build: .
+    networks:
+      - flink-local-env
+    command: taskmanager
+    scale: 1
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flinkjobmanager
+        taskmanager.numberOfTaskSlots: 2
+    volumes:
+      - ../python_classes/:/usr/local/lib/python3.11/site-packages/python_classes/
+    depends_on: 
+      - flinkjobmanager
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.2
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_SERVERS: zookeeper:2888:3888
+    networks:
+      - flink-local-env
+
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.2
+    hostname: kafka
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+      - "9999:9999"
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:19092,EXTERNAL://${DOCKER_HOST_IP:-127.0.0.1}:9092,DOCKER://host.docker.internal:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,DOCKER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_BROKER_ID: 1
+      KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_HOSTNAME: ${DOCKER_HOST_IP:-127.0.0.1}
+      KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
+      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "true"
+    depends_on:
+      - zookeeper
+    networks:
+      - flink-local-env
+
+  
+  wait-for-kafka:
+    image: confluentinc/cp-kafka:7.3.2
+    hostname: wait-for-kafka
+    container_name: wait-for-kafka
+    depends_on:
+      - kafka
+    command: >
+      sh -c "chmod +x /home/wait-for-it.sh
+      && /home/wait-for-it.sh kafka:19092 
+      && kafka-topics --bootstrap-server kafka:19092 --create --topic json-customers
+      && kafka-topics --bootstrap-server kafka:19092 --create --topic json-transactions"
+    volumes:
+      - ./wait-for-it.sh:/home/wait-for-it.sh
+    networks:
+      - flink-local-env
+
+
+networks:
+  flink-local-env: 
+    driver: bridge
+  
