@@ -12,3 +12,8 @@ It is designed to help developers learn and experiment with Flink's streaming an
 - [02_Flink_Table_api](./02_Flink_Table_api): PyFlink Table API examples  
 - [03_Flink_Datastream_api](./03_Flink_Datastream_api): PyFlink DataStream API examples  
 - [data_producer](./data_producer): Python application that produces data to [local_env](./local_env) Kafka  
+
+
+
+## To check
+- [Data Streaming Engineering Certification](https://developer.confluent.io/certification/)

@@ -19,6 +19,7 @@ services:
       - "8081:8081"
     command: jobmanager
     volumes:
+      - ../01_Flink_sql/:/home/jobs/01_Flink_sql/
       - ../02_Flink_Table_api/:/home/jobs/02_Flink_Table_api/
       - ../03_Flink_Datastream_api/:/home/jobs/03_Flink_Datastream_api/
       - ../python_classes/:/usr/local/lib/python3.11/site-packages/python_classes/

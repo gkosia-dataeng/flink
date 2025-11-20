@@ -58,3 +58,38 @@ Follow these steps to explore catalogs, databases, and tables in Flink SQL:
 
 11. **Get the definition of `transactions` table**: ``` SHOW CREATE TABLE transactions; ```
 
+12. **Create the Sink Table**
+
+    **Kafka connectors:**
+
+    - **kafka**:  
+    - Append-only connector.  
+    - Can be used when the output does **not** include updates or deletes.  
+    - If used to write the result of a `GROUP BY` or aggregation that produces updates/deletes, it will fail with an error because it does **not** support updates or deletes.  
+
+    - **upsert-kafka**:  
+    - Supports **updates** and **deletes**.  
+    - Requires defining:
+        - `PRIMARY KEY NOT ENFORCED`
+        - `key.format`
+        - `value.format`  
+    - On **update**, it emits a message with:
+        - `key` = primary key column
+        - `value` = new value  
+    - On **delete**, it sends a **tombstone** message (value = `null`) for the key.
+
+    **Example:**
+
+    ```sql
+    CREATE TABLE SQL_LAB.customer_sum (
+        cust_id INT PRIMARY KEY NOT ENFORCED,
+        amount DOUBLE
+    ) WITH (
+        'connector' = 'upsert-kafka',
+        'topic' = 'json-output',
+        'properties.bootstrap.servers' = 'kafka:19092',
+        'properties.group.id' = 'flink_group',
+        'value.format' = 'json',
+        'key.format' = 'json'
+    );
+
