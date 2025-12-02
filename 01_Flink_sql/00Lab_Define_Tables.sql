@@ -49,7 +49,7 @@ CREATE TABLE customer_sum (
     'value.format' = 'json'
 );
 
--- Insert query (this is the part that was missing)
+
 INSERT INTO customer_sum
 SELECT
     t.cust_id,
