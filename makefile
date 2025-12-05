@@ -6,11 +6,16 @@ sql-down:
 	@cd local_env && \
 	docker-compose down
 
-sql-client:
+sql-cl:
 	@cd local_env && \
 	docker-compose run sql-client
 
-data:
+data-ut:
 	@cd ./data_producer/ && \
 	. myenv/bin/activate && \
-	python python_from_file_to_kafka.py 
+	python python_from_file_to_kafka.py --file users_transactions
+
+data-t:
+	@cd ./data_producer/ && \
+	. myenv/bin/activate && \
+	python python_from_file_to_kafka.py --file simple_transactions

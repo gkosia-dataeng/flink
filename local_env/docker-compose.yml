@@ -2,7 +2,7 @@ version: '2'
 services:
   sql-client:
     build: .
-    command: /home/jobs/start-sql.sh
+    command: bin/sql-client.sh
     depends_on:
       - flinkjobmanager
     environment:
@@ -10,8 +10,6 @@ services:
         FLINK_PROPERTIES=
         jobmanager.rpc.address: flinkjobmanager
         rest.address: flinkjobmanager
-    volumes:
-      - ../01_Flink_sql/:/home/jobs/01_Flink_sql/
     networks:
       - flink-local-env
 

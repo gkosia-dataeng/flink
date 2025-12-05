@@ -1,7 +1,7 @@
 ## Data Producer
 
 `data_producer` is a Python script that generates messages to Kafka topics.  
-The messages are stored in `data.txt` in the following format:
+The messages are stored in text files unde the folder `data` in the following format:
 
 ```
 <topic>@{json message}
@@ -39,7 +39,7 @@ Make sure your `local_env` environment (Kafka + Flink) is running.
 Then start producing messages:
 
 ```bash
-python python_from_file_to_kafka.py
+python python_from_file_to_kafka.py --file simple_transactions
 ```
 
 ---

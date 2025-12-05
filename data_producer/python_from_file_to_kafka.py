@@ -1,9 +1,19 @@
+""" Produce to kafka the events of the file in the params
+Usage:
+    python_from_file_to_kafka.py  --file=<filename>
+    python_from_file_to_kafka.py (-h | --help)
+
+Options:
+    -h --help         Show this screen. 
+"""
+
 from kafka import KafkaProducer
 from kafka.admin import KafkaAdminClient, NewTopic
 import time
 import random
 import logging
 import sys
+from docopt import docopt
 
 logging.basicConfig(level=logging.INFO)
 
@@ -38,7 +48,12 @@ if __name__ == "__main__":
 
     kadminclient = KafkaAdminClient(bootstrap_servers = __bootstrap_server)
 
-    topics, messages = load_messages(f'./data.txt') 
+
+    args = docopt(__doc__)
+    file = args['--file']
+
+
+    topics, messages = load_messages(f'./data/{file}.txt') 
 
 
     try:

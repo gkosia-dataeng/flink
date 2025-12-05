@@ -1,8 +1,8 @@
-## Flink SQL Client Tutorial
+## Flink Tables and Catalogs Lab
 
 Follow these steps to explore catalogs, databases, and tables in Flink SQL:
 
-1. **Enter the SQL Client container**: ```  docker-compose run sql-client ``` or ``` make sql-client```
+1. **Enter the SQL Client container**: ```  docker-compose run sql-client ``` or ``` make sql-cl```
 
 2. **Check existing catalogs**:  ``` SHOW CATALOGS;  ``` \
    *By default, there is only one catalog: `default_catalog`.*
