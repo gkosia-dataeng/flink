@@ -19,3 +19,8 @@ data-t:
 	@cd ./data_producer/ && \
 	. myenv/bin/activate && \
 	python python_from_file_to_kafka.py --file simple_transactions
+
+data-a:
+	@cd ./data_producer/ && \
+	. myenv/bin/activate && \
+	python python_from_file_to_kafka.py --file active_file

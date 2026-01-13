@@ -61,7 +61,7 @@ if __name__ == "__main__":
         for message in messages:
             post_to_kafka(producer, message['topic'], 1, bytes(message['message'], 'utf-8'))
             logging.info(f"producing to {message['topic']}, message {message['message']}")
-            time.sleep(1)
+            time.sleep(2)
     except Exception as e:
         logging.error(str(e))
     finally:

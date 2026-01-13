@@ -1,0 +1,13 @@
+json-customers@{"id": 1, "name": "Nick", "country": "Cyprus"}
+json-customers@{"id": 2, "name": "Anna", "country": "Greece"}
+json-transactions@{"id": 1, "cust_id": 1, "create_time": "2025-11-11 15:10:00", "amount": 10 }
+json-transactions@{"id": 2, "cust_id": 1, "create_time": "2025-11-11 15:11:00", "amount": 11 }
+json-transactions@{"id": 3, "cust_id": 3, "create_time": "2025-11-11 15:12:00", "amount": 12 }
+json-customers@{"id": 3, "name": "Mark", "country": "USA"}
+json-customers@{"id": 4, "name": "Sophia", "country": "Italy"}
+json-transactions@{"id": 4, "cust_id": 4, "create_time": "2025-11-11 15:13:00", "amount": 13 }
+json-transactions@{"id": 5, "cust_id": 4, "create_time": "2025-11-11 15:14:00", "amount": 14 }
+json-customers@{"id": 5, "name": "David", "country": "Greece"}
+json-transactions@{"id": 6, "cust_id": 6, "create_time": "2025-11-11 15:15:00", "amount": 15 }
+json-customers@{"id": 7, "name": "George", "country": "Germany"}
+json-customers@{"id": 8, "name": "Emma", "country": "France"}

@@ -18,14 +18,17 @@ Follow these steps to explore time window aggregations:
                'topic' = 'json-transactions',
                'properties.bootstrap.servers' = 'kafka:19092',
                'properties.group.id' = 'flink_group',
-               'scan.startup.mode' = 'earliest-offset',
+               'scan.startup.mode' = 'latest-offset',
                'format' = 'json',
                'json.fail-on-missing-field' = 'false',
                'json.ignore-parse-errors' = 'true'
             );
    ```
 
-3. **Run the first query using the Tumpling window**: 
+
+***IMPORTANT NOTE: BECAUSE WE ARE USING WATERMARKS (EVENT TIME PROCESSING) FLINK WILL EMIT THE MESSAGE ONLY IF THE TIME OF THE GROUP PASSED BASED ON create_time***
+
+3. **Run the query using the Tumpling window**: 
 
    The second argument of the TUMBLE is the timecol which should be a time attribute type. \
    A simple TIMESTAMP column (create_time) is not accepted, should be converted to event time attribute by specifing a watermark on it. 
@@ -67,4 +70,57 @@ Follow these steps to explore time window aggregations:
 
 
    
-4. **In a separeted terminal run the data producer to populate few transaction in the kafka topic**:  ```make data-t```
+4. **In a separeted terminal run the data producer to populate few transaction in the kafka topic and insect the results in flink client**:  ```make data-t```
+
+
+
+5. **Create the table using the Hopping/Sliding window**: 
+
+   ```
+      SELECT 
+       cust_id,
+       window_start,
+       window_end,
+       COUNT(*)    AS num_of_messages,
+       SUM(amount) AS amount_by_window
+      FROM TABLE(
+         HOP(
+             TABLE transactions
+            ,DESCRIPTOR(create_time), INTERVAL '5' MINUTES, INTERVAL '10' MINUTES
+            )
+      )
+      GROUP BY 
+       cust_id,
+       window_start,
+       window_end;
+   
+   
+   ```
+
+
+6. **In a separeted terminal run the data producer to populate few transaction in the kafka topic and insect the results in flink client**:  ```make data-t```
+
+
+7. **Create the table using the Session window**: 
+
+   ```
+      SELECT 
+       window_start,
+       window_end,
+       COUNT(*)    AS num_of_messages,
+       SUM(amount) AS amount_by_window
+      FROM TABLE(
+         SESSION(
+             TABLE transactions
+            ,DESCRIPTOR(create_time), INTERVAL '5' MINUTES
+            )
+      )
+      GROUP BY 
+       window_start,
+       window_end;
+   
+   
+   ```
+
+
+8. **In a separeted terminal run the data producer to populate few transaction in the kafka topic and insect the results in flink client**:  ```make data-t```
